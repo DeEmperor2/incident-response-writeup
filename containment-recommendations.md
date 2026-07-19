@@ -27,3 +27,36 @@
 
 ## Detection Rules (Splunk)
 To detect similar C2 beaconing in future:
+**Query 1 — Direct C2 IP detection:**
+index=network dest_ip="5.252.153.241"
+| stats count by src_ip
+| where count > 100
+
+**Query 2 High volume outbound traffic anomaly:**
+index=network bytes_out > 1000000
+| stats count by dest_ip
+| sort -count
+
+**Query 3 Detect beaconing pattern (regular intervals):**
+index=network
+| bucket _time span=1m
+| stats count by _time dest_ip
+| eventstats stdev(count) as stdev avg(count) as avg by dest_ip
+| where stdev < 2 AND avg > 10
+
+**Query 4 New external connections from infected host:**
+index=network src_ip="10.1.17.215"
+| stats count by dest_ip
+| where NOT cidrmatch("10.0.0.0/8", dest_ip)
+| sort -count
+
+## Defensive Layer Summary
+| Layer | Control | Status |
+|-------|---------|--------|
+| Network | Ad blocking | Recommended |
+| Network | Web proxy | Recommended |
+| Network | Firewall C2 block | Implemented (lab) |
+| Endpoint | EDR deployment | Recommended |
+| Endpoint | AV (signature) | Insufficient alone |
+| Identity | MFA | Recommended |
+| User | Awareness training | Recommended |
